@@ -199,6 +199,7 @@ final class PeerInfoScreenData {
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
     let isPowerSavingEnabled: Bool?
+    let currentTime: Int?
     
     init(
         peer: Peer?,
@@ -220,7 +221,8 @@ final class PeerInfoScreenData {
         requestsContext: PeerInvitationImportersContext?,
         threadData: MessageHistoryThreadData?,
         appConfiguration: AppConfiguration?,
-        isPowerSavingEnabled: Bool?
+        isPowerSavingEnabled: Bool?,
+        currentTime: Int?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -242,6 +244,7 @@ final class PeerInfoScreenData {
         self.threadData = threadData
         self.appConfiguration = appConfiguration
         self.isPowerSavingEnabled = isPowerSavingEnabled
+        self.currentTime = currentTime
     }
 }
 
@@ -541,7 +544,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             requestsContext: nil,
             threadData: nil,
             appConfiguration: appConfiguration,
-            isPowerSavingEnabled: isPowerSavingEnabled
+            isPowerSavingEnabled: isPowerSavingEnabled,
+            currentTime: nil
         )
     }
 }
@@ -573,7 +577,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContext: nil,
                 threadData: nil,
                 appConfiguration: nil,
-                isPowerSavingEnabled: nil
+                isPowerSavingEnabled: nil,
+                currentTime: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -677,9 +682,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 secretChatKeyFingerprint,
-                status
+                status,
+                ApiFetcher.fetchNetworkTime()
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, currentTime -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
@@ -707,7 +713,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: nil,
                     threadData: nil,
                     appConfiguration: nil,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    currentTime: currentTime
                 )
             }
         case .channel:
@@ -738,9 +745,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsContextPromise.get(),
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
-                requestsStatePromise.get()
+                requestsStatePromise.get(),
+                ApiFetcher.fetchNetworkTime()
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, currentTime -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -786,7 +794,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: currentRequestsContext,
                     threadData: nil,
                     appConfiguration: nil,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    currentTime: currentTime
                 )
             }
         case let .group(groupId):
@@ -916,9 +925,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
                 threadData,
-                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+                ApiFetcher.fetchNetworkTime()
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView, currentTime -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -989,7 +999,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: currentRequestsContext,
                     threadData: threadData,
                     appConfiguration: appConfiguration,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    currentTime: currentTime
                 ))
             }
         }
